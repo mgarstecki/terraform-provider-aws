@@ -226,11 +226,19 @@ func resourceAwsLaunchConfiguration() *schema.Resource {
 						"device_name": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 
 						"virtual_name": {
 							Type:     schema.TypeString,
-							Required: true,
+							Optional: true,
+							ForceNew: true,
+						},
+
+						"no_device": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							ForceNew: true,
 						},
 					},
 				},
@@ -239,6 +247,7 @@ func resourceAwsLaunchConfiguration() *schema.Resource {
 					m := v.(map[string]interface{})
 					buf.WriteString(fmt.Sprintf("%s-", m["device_name"].(string)))
 					buf.WriteString(fmt.Sprintf("%s-", m["virtual_name"].(string)))
+					buf.WriteString(fmt.Sprintf("%t-", m["no_device"].(bool)))
 					return hashcode.String(buf.String())
 				},
 			},
@@ -406,10 +415,31 @@ func resourceAwsLaunchConfigurationCreate(d *schema.ResourceData, meta interface
 		vL := v.(*schema.Set).List()
 		for _, v := range vL {
 			bd := v.(map[string]interface{})
-			blockDevices = append(blockDevices, &autoscaling.BlockDeviceMapping{
+
+			bdm := &autoscaling.BlockDeviceMapping{
 				DeviceName:  aws.String(bd["device_name"].(string)),
 				VirtualName: aws.String(bd["virtual_name"].(string)),
-			})
+				NoDevice:    aws.Bool(bd["no_device"].(bool)),
+			}
+
+			// CreateLaunchConfiguration requires that one and only one of VirtualName
+			// and NoDevice be set: validate that, nil the other field.
+			if aws.BoolValue(bdm.NoDevice) {
+				if aws.StringValue(bdm.VirtualName) != "" {
+					return fmt.Errorf("virtual_name and no_device cannot be set at the same time in ephemeral_block_device.")
+				}
+
+				bdm.VirtualName = nil
+
+			} else {
+				if aws.StringValue(bdm.VirtualName) == "" {
+					return fmt.Errorf("either virtual_name or no_device must be set in ephemeral_block_device.")
+				}
+
+				bdm.NoDevice = nil
+			}
+
+			blockDevices = append(blockDevices, bdm)
 		}
 	}
 
