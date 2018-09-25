@@ -1,20 +1,43 @@
-## 1.37.0 (Unreleased)
-
-FEATURES:
-
-* **New Resource:** `aws_dx_bgp_peer` [GH-5886]
+## 1.38.0 (Unreleased)
 
 ENHANCEMENTS:
 
-* resource/aws_s3_bucket_inventory: Allow SSE-S3 encryption [GH-5870]
+* data-source/aws_autoscaling_groups: Add `arns` attribute [GH-5766]
+* resource/aws_codebuild_project: Add `secondary_artifacts` and `secondary_sources` arguments [GH-5939]
+* resource/aws_launch_template: Support `credit_specification` configuration of T3 instance types [GH-5922]
+* resource/aws_launch_template: Allow `network_interface` `ipv6_address_count` configuration [GH-5771]
 
 BUG FIXES:
 
-* resource/aws_config_config_rule: Prevent panic when specifying empty `scope` [GH-5852]
-* resource/aws_iam_policy: Ensure `description` is properly read into Terraform state during resource creation [GH-5884]
-* resource/aws_launch_template: Fix handling of `network_interface` `ipv6_addresses` [GH-5883]
-* resource/aws_s3_bucket: Prevent panics with various API read failures [GH-5842]
-* resource/aws_s3_bucket: Prevent `NoSuchBucket` error on deletion [GH-5842]
+* data-source/aws_ami: Prevent panics with AMIs in failed image state [GH-5968]
+* resource/aws_dms_replication_instance: Properly handle `engine_version` updates [GH-5948]
+* resource/aws_launch_template: Prevent `Auto Scaling only supports the 'one-time' Spot instance type with no duration.` error when using `instance_market_options` and AutoScaling Groups [GH-5957]
+* resource/aws_security_group: Properly handle lingering ENIs from Lambda and similar services [GH-4884]
+* resource/aws_subnet: Properly handle lingering ENIs from Lambda and similar services [GH-4884]
+
+## 1.37.0 (September 19, 2018)
+
+FEATURES:
+
+* **New Resource:** `aws_dx_bgp_peer` ([#5886](https://github.com/terraform-providers/terraform-provider-aws/issues/5886))
+
+ENHANCEMENTS:
+
+* data-source/aws_ami_ids: Add `sort_ascending` argument ([#5912](https://github.com/terraform-providers/terraform-provider-aws/issues/5912))
+* resource/aws_iam_role_policy_attachment: Support resource import ([#5910](https://github.com/terraform-providers/terraform-provider-aws/issues/5910))
+* resource/aws_s3_bucket_inventory: Allow SSE-S3 encryption ([#5870](https://github.com/terraform-providers/terraform-provider-aws/issues/5870))
+* resource/aws_security_group: Add `prefix_list_ids` argument for `ingress` rules ([#5916](https://github.com/terraform-providers/terraform-provider-aws/issues/5916))
+
+BUG FIXES:
+
+* resource/aws_config_config_rule: Prevent panic when specifying empty `scope` ([#5852](https://github.com/terraform-providers/terraform-provider-aws/issues/5852))
+* resource/aws_iam_policy: Ensure `description` is properly read into Terraform state during resource creation ([#5884](https://github.com/terraform-providers/terraform-provider-aws/issues/5884))
+* resource/aws_instance: Properly handle `credit_specifications` with T3 instance types ([#5805](https://github.com/terraform-providers/terraform-provider-aws/issues/5805))
+* resource/aws_launch_template: Fix handling of `network_interface` `ipv6_addresses` ([#5883](https://github.com/terraform-providers/terraform-provider-aws/issues/5883))
+* resource/aws_redshift_cluster: Properly disable logging when using `logging` nested argument ([#5895](https://github.com/terraform-providers/terraform-provider-aws/issues/5895))
+* resource/aws_s3_bucket: Prevent panics with various API read failures ([#5842](https://github.com/terraform-providers/terraform-provider-aws/issues/5842))
+* resource/aws_s3_bucket: Prevent `NoSuchBucket` error on deletion ([#5842](https://github.com/terraform-providers/terraform-provider-aws/issues/5842))
+* resource/aws_wafregional_byte_match_set: Properly read `byte_match_tuple` into Terraform state ([#5902](https://github.com/terraform-providers/terraform-provider-aws/issues/5902))
 
 ## 1.36.0 (September 13, 2018)
 

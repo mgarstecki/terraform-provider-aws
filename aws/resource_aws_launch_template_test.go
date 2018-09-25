@@ -6,11 +6,54 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/hashicorp/terraform/helper/acctest"
 	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/terraform"
 )
+
+func TestAccAWSLaunchTemplate_importBasic(t *testing.T) {
+	resName := "aws_launch_template.foo"
+	rInt := acctest.RandInt()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSLaunchTemplateConfig_basic(rInt),
+			},
+			{
+				ResourceName:      resName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func TestAccAWSLaunchTemplate_importData(t *testing.T) {
+	resName := "aws_launch_template.foo"
+	rInt := acctest.RandInt()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSLaunchTemplateConfig_data(rInt),
+			},
+			{
+				ResourceName:      resName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
 
 func TestAccAWSLaunchTemplate_basic(t *testing.T) {
 	var template ec2.LaunchTemplate
@@ -121,7 +164,6 @@ func TestAccAWSLaunchTemplate_data(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSLaunchTemplateExists(resName, &template),
 					resource.TestCheckResourceAttr(resName, "block_device_mappings.#", "1"),
-					resource.TestCheckResourceAttr(resName, "credit_specification.#", "1"),
 					resource.TestCheckResourceAttrSet(resName, "disable_api_termination"),
 					resource.TestCheckResourceAttr(resName, "ebs_optimized", "false"),
 					resource.TestCheckResourceAttr(resName, "elastic_gpu_specifications.#", "1"),
@@ -208,8 +250,9 @@ func TestAccAWSLaunchTemplate_tags(t *testing.T) {
 	})
 }
 
-func TestAccAWSLaunchTemplate_nonBurstable(t *testing.T) {
+func TestAccAWSLaunchTemplate_creditSpecification_nonBurstable(t *testing.T) {
 	var template ec2.LaunchTemplate
+	rName := acctest.RandomWithPrefix("tf-acc-test")
 	resName := "aws_launch_template.foo"
 
 	resource.Test(t, resource.TestCase{
@@ -218,9 +261,53 @@ func TestAccAWSLaunchTemplate_nonBurstable(t *testing.T) {
 		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccAWSLaunchTemplateConfig_nonBurstable,
+				Config: testAccAWSLaunchTemplateConfig_creditSpecification(rName, "m1.small", "standard"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckAWSLaunchTemplateExists(resName, &template),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAWSLaunchTemplate_creditSpecification_t2(t *testing.T) {
+	var template ec2.LaunchTemplate
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resName := "aws_launch_template.foo"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSLaunchTemplateConfig_creditSpecification(rName, "t2.micro", "unlimited"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSLaunchTemplateExists(resName, &template),
+					resource.TestCheckResourceAttr(resName, "credit_specification.#", "1"),
+					resource.TestCheckResourceAttr(resName, "credit_specification.0.cpu_credits", "unlimited"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAWSLaunchTemplate_creditSpecification_t3(t *testing.T) {
+	var template ec2.LaunchTemplate
+	rName := acctest.RandomWithPrefix("tf-acc-test")
+	resName := "aws_launch_template.foo"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSLaunchTemplateConfig_creditSpecification(rName, "t3.micro", "unlimited"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSLaunchTemplateExists(resName, &template),
+					resource.TestCheckResourceAttr(resName, "credit_specification.#", "1"),
+					resource.TestCheckResourceAttr(resName, "credit_specification.0.cpu_credits", "unlimited"),
 				),
 			},
 		},
@@ -265,6 +352,65 @@ func TestAccAWSLaunchTemplate_networkInterface_ipv6Addresses(t *testing.T) {
 					testAccCheckAWSLaunchTemplateExists(resName, &template),
 					resource.TestCheckResourceAttr(resName, "network_interfaces.#", "1"),
 					resource.TestCheckResourceAttr(resName, "network_interfaces.0.ipv6_addresses.#", "2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAWSLaunchTemplate_networkInterface_ipv6AddressCount(t *testing.T) {
+	var template ec2.LaunchTemplate
+	resName := "aws_launch_template.foo"
+	rInt := acctest.RandInt()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSLaunchTemplateConfig_ipv6_count(rInt),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSLaunchTemplateExists(resName, &template),
+					resource.TestCheckResourceAttr(resName, "network_interfaces.#", "1"),
+					resource.TestCheckResourceAttr(resName, "network_interfaces.0.ipv6_address_count", "1"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAWSLaunchTemplate_instanceMarketOptions(t *testing.T) {
+	var template ec2.LaunchTemplate
+	var group autoscaling.Group
+	templateName := "aws_launch_template.test"
+	groupName := "aws_autoscaling_group.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckAWSLaunchTemplateDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAWSLaunchTemplateConfig_instanceMarketOptions_basic,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSLaunchTemplateExists(templateName, &template),
+					testAccCheckAWSAutoScalingGroupExists(groupName, &group),
+					resource.TestCheckResourceAttr(templateName, "instance_market_options.#", "1"),
+					resource.TestCheckResourceAttr(templateName, "instance_market_options.0.spot_options.#", "1"),
+					resource.TestCheckResourceAttr(groupName, "launch_template.#", "1"),
+					resource.TestCheckResourceAttr(groupName, "launch_template.0.version", "1"),
+				),
+			},
+			{
+				Config: testAccAWSLaunchTemplateConfig_instanceMarketOptions_update,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckAWSLaunchTemplateExists(templateName, &template),
+					testAccCheckAWSAutoScalingGroupExists(groupName, &group),
+					resource.TestCheckResourceAttr(templateName, "instance_market_options.#", "1"),
+					resource.TestCheckResourceAttr(templateName, "instance_market_options.0.spot_options.#", "1"),
+					resource.TestCheckResourceAttr(groupName, "launch_template.#", "1"),
+					resource.TestCheckResourceAttr(groupName, "launch_template.0.version", "2"),
 				),
 			},
 		},
@@ -336,6 +482,18 @@ resource "aws_launch_template" "foo" {
 
   tags {
     foo = "bar"
+  }
+}
+`, rInt)
+}
+
+func testAccAWSLaunchTemplateConfig_ipv6_count(rInt int) string {
+	return fmt.Sprintf(`
+resource "aws_launch_template" "foo" {
+  name = "set_ipv6_count_foo_%d"
+
+  network_interfaces {
+    ipv6_address_count = 1
   }
 }
 `, rInt)
@@ -449,10 +607,6 @@ resource "aws_launch_template" "foo" {
     device_name = "test"
   }
 
-  credit_specification {
-    cpu_credits = "standard"
-  }
-
   disable_api_termination = true
 
   ebs_optimized = false
@@ -518,15 +672,18 @@ resource "aws_launch_template" "foo" {
 `, rInt)
 }
 
-const testAccAWSLaunchTemplateConfig_nonBurstable = `
+func testAccAWSLaunchTemplateConfig_creditSpecification(rName, instanceType, cpuCredits string) string {
+	return fmt.Sprintf(`
 resource "aws_launch_template" "foo" {
-  name = "non-burstable-launch-template"
-  instance_type = "m1.small"
+  instance_type = %q
+  name          = %q
+
   credit_specification {
-    cpu_credits = "standard"
+    cpu_credits = %q
   }
 }
-`
+`, instanceType, rName, cpuCredits)
+}
 
 const testAccAWSLaunchTemplateConfig_networkInterface = `
 resource "aws_vpc" "test" {
@@ -630,6 +787,91 @@ resource "aws_autoscaling_group" "bar" {
   launch_template = {
     id = "${aws_launch_template.foo.id}"
     version = "${aws_launch_template.foo.latest_version}"
+  }
+}
+`
+
+const testAccAWSLaunchTemplateConfig_instanceMarketOptions_basic = `
+data "aws_ami" "test" {
+  most_recent = true
+
+  filter {
+    name = "owner-alias"
+    values = ["amazon"]
+  }
+
+  filter {
+    name = "name"
+    values = ["amzn-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+resource "aws_launch_template" "test" {
+  name_prefix = "instance_market_options"
+  image_id = "${data.aws_ami.test.id}"
+
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      spot_instance_type = "one-time"
+    }
+  }
+}
+
+data "aws_availability_zones" "available" {}
+
+resource "aws_autoscaling_group" "test" {
+  availability_zones = ["${data.aws_availability_zones.available.names[0]}"]
+  desired_capacity = 0
+  min_size = 0
+  max_size = 0
+
+  launch_template {
+    id = "${aws_launch_template.test.id}"
+    version = "${aws_launch_template.test.latest_version}"
+  }
+}
+`
+
+const testAccAWSLaunchTemplateConfig_instanceMarketOptions_update = `
+data "aws_ami" "test" {
+  most_recent = true
+
+  filter {
+    name = "owner-alias"
+    values = ["amazon"]
+  }
+
+  filter {
+    name = "name"
+    values = ["amzn-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+resource "aws_launch_template" "test" {
+  name_prefix = "instance_market_options"
+  image_id = "${data.aws_ami.test.id}"
+  instance_type = "t2.micro"
+
+  instance_market_options {
+    market_type = "spot"
+    spot_options {
+      spot_instance_type = "one-time"
+    }
+  }
+}
+
+data "aws_availability_zones" "available" {}
+
+resource "aws_autoscaling_group" "test" {
+  availability_zones = ["${data.aws_availability_zones.available.names[0]}"]
+  desired_capacity = 0
+  min_size = 0
+  max_size = 0
+
+  launch_template {
+    id = "${aws_launch_template.test.id}"
+    version = "${aws_launch_template.test.latest_version}"
   }
 }
 `
